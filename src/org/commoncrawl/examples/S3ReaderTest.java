@@ -21,8 +21,8 @@ public class S3ReaderTest {
 		S3Service s3s = new RestS3Service(null);
 		
 		// Let's grab a file out of the CommonCrawl S3 bucket
-		String fn = "common-crawl/crawl-data/CC-MAIN-2013-48/segments/1386163035819/warc/CC-MAIN-20131204131715-00000-ip-10-33-133-15.ec2.internal.warc.gz";
-		S3Object f = s3s.getObject("aws-publicdatasets", fn, null, null, null, null, null, null);
+		String fn = "crawl-data/CC-MAIN-2013-48/segments/1386163035819/warc/CC-MAIN-20131204131715-00000-ip-10-33-133-15.ec2.internal.warc.gz";
+		S3Object f = s3s.getObject("commoncrawl", fn, null, null, null, null, null, null);
 		
 		// The file name identifies the ArchiveReader and indicates if it should be decompressed
 		ArchiveReader ar = WARCReaderFactory.get(fn, f.getDataInputStream(), true);
