@@ -3,7 +3,7 @@
 
   <groupId>org.commoncrawl</groupId>
   <artifactId>cc-warc-examples</artifactId>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.2-SNAPSHOT</version>
   <packaging>jar</packaging>  
 
   <name>cc-warc-examples</name>
@@ -11,7 +11,7 @@
     Common Crawl WARC Examples.
     Contains both wrappers for processing WARC files in Hadoop MapReduce jobs and Hadoop examples to get you started.
   </description>
-  <url>https://github.com/Smerity/cc-warc-examples</url>
+  <url>https://github.com/commoncrawl/cc-warc-examples</url>
 
   <licenses>
     <license>
@@ -22,8 +22,8 @@
   </licenses>
 
   <scm>    
-    <connection>scm:git:git@github.com:Smerity/cc-warc-examples.git</connection>
-    <url>git@github.com:Smerity/cc-warc-examples.git</url>
+    <connection>scm:git:git@github.com:commoncrawl/cc-warc-examples.git</connection>
+    <url>git@github.com:commoncrawl/cc-warc-examples.git</url>
   </scm>
   
   <properties>
@@ -56,12 +56,24 @@
       <groupId>org.netpreserve.commons</groupId>
       <artifactId>webarchive-commons</artifactId>
       <version>1.1.2</version>
+      <exclusions>
+        <exclusion>
+         <groupId>org.apache.hadoop</groupId>
+         <artifactId>hadoop-core</artifactId>
+       </exclusion>
+      </exclusions>
     </dependency>
     
     <dependency>
       <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-core</artifactId>
-      <version>0.20.2-cdh3u4</version>
+      <artifactId>hadoop-client</artifactId>
+      <version>2.7.1</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.java.dev.jets3t</groupId>
+      <artifactId>jets3t</artifactId>
+      <version>0.9.4</version>
     </dependency>
   </dependencies>
 
@@ -74,8 +86,8 @@
 	<artifactId>maven-compiler-plugin</artifactId>
 	<version>2.3.2</version>
 	<configuration>
-	  <source>1.5</source>
-	  <target>1.5</target>
+	  <source>1.7</source>
+	  <target>1.7</target>
 	</configuration>
       </plugin>
       <plugin>

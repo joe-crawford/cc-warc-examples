@@ -5,7 +5,7 @@ import org.archive.io.ArchiveReader;
 import org.archive.io.ArchiveRecord;
 import org.archive.io.warc.WARCReaderFactory;
 import org.jets3t.service.S3Service;
-import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.ServiceException;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
@@ -16,7 +16,7 @@ import org.jets3t.service.model.S3Object;
  * @author Stephen Merity (Smerity)
  */
 public class S3ReaderTest {
-	public static void main(String[] args) throws IOException, S3ServiceException {
+	public static void main(String[] args) throws IOException, ServiceException {
 		// We're accessing a publicly available bucket so don't need to fill in our credentials
 		S3Service s3s = new RestS3Service(null);
 		
