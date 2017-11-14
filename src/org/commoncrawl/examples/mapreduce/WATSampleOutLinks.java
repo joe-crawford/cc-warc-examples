@@ -48,7 +48,9 @@ public class WATSampleOutLinks extends Configured implements Tool {
 		LINKS_PAGE_ACCEPTED,
 		LINKS_TOTAL,
 		LINKS_MEDIA_SKIPPED,
-		LINKS_PAGE_ACCEPTED_UNIQ,
+		LINKS_PAGE_UNIQ,
+		LINKS_PAGE_UNIQ_ACCEPTED,
+		LINKS_PAGE_UNIQ_SKIPPED_MAX_PER_PAGE,
 		LINKS_RANDOM_SKIP,
 		LINKS_RANDOM_SAMPLED,
 	}
@@ -56,6 +58,12 @@ public class WATSampleOutLinks extends Configured implements Tool {
 	protected static class OutLinkMapper extends Mapper<Text, ArchiveReader, Text, LongWritable> {
 		private Text outKey = new Text();
 		private LongWritable outVal = new LongWritable(1);
+		int maxOutlinksPerPage = 80;
+
+		@Override
+		public void setup(Context context) {
+			maxOutlinksPerPage = context.getConfiguration().getInt("wat.outlinks.max.per.page", 80);
+		}
 
 		@Override
 		public void map(Text key, ArchiveReader value, Context context) throws IOException {
@@ -115,11 +123,19 @@ public class WATSampleOutLinks extends Configured implements Tool {
 							JSONArray links = htmlMetaData.getJSONArray("Links");
 							addOutLinks(context, outLinks, baseUrl, links);
 						}
-						context.getCounter(COUNTER.LINKS_PAGE_ACCEPTED_UNIQ).increment(outLinks.size());
+						context.getCounter(COUNTER.LINKS_PAGE_UNIQ).increment(outLinks.size());
+						int n = 0;
 						for (String url : outLinks) {
+							n++;
 							outKey.set(url.toString());
 							context.write(outKey, outVal);
+							if (n > maxOutlinksPerPage) {
+								context.getCounter(COUNTER.LINKS_PAGE_UNIQ_SKIPPED_MAX_PER_PAGE)
+										.increment(outLinks.size() - n);
+								break;
+							}
 						}
+						context.getCounter(COUNTER.LINKS_PAGE_UNIQ_ACCEPTED).increment(n);
 					} catch (JSONException ex) {
 						context.getCounter(COUNTER.EXCEPTIONS_JSON).increment(1);
 						LOG.error("Caught Exception", ex);
@@ -234,7 +250,10 @@ public class WATSampleOutLinks extends Configured implements Tool {
 	public int run(String[] args) throws Exception {
 		if (args.length < 2) {
 			System.err.println("Usage: WATSampleOutLinks [-Dproperty=value ...] <outputpath> <inputpath>...");
-			System.err.println("  -Dsample.probability=<prob>   probability (0.0 < prob <= 1.0) to select an outlink");
+			System.err.println("  -Dwat.outlinks.sample.probability=<prob>");
+			System.err.println("  \t\tprobability (0.0 < prob <= 1.0) to select an outlink");
+			System.err.println("  -Dwat.outlinks.max.per.page=n");
+			System.err.println("  \t\tmax. number of accepted outlinks per page");
 			return -1;
 		}
 		Path outputPath = null;
@@ -255,7 +274,7 @@ public class WATSampleOutLinks extends Configured implements Tool {
 		Job job = Job.getInstance(conf);
 		job.setJarByClass(WATSampleOutLinks.class);
 
-		double sampleProbability = conf.getDouble("sample.probability", .5);
+		double sampleProbability = conf.getDouble("wat.outlinks.sample.probability", .5);
 
 		for (int i = 0; i < inputPaths.length; i++) {
 			LOG.info("Input path: " + inputPaths[i]);
