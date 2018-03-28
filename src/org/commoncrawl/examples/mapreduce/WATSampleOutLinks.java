@@ -59,10 +59,15 @@ public class WATSampleOutLinks extends Configured implements Tool {
 		private Text outKey = new Text();
 		private LongWritable outVal = new LongWritable(1);
 		int maxOutlinksPerPage = 80;
+		boolean extractFeed = false;
+		String extractFeedMarker = "";
 
 		@Override
 		public void setup(Context context) {
-			maxOutlinksPerPage = context.getConfiguration().getInt("wat.outlinks.max.per.page", 80);
+			Configuration conf = context.getConfiguration();
+			maxOutlinksPerPage = conf.getInt("wat.outlinks.max.per.page", 80);
+			extractFeed = conf.getBoolean("wat.outlinks.extract.feed", false);
+			extractFeedMarker = conf.get("wat.outlinks.extract.feed.marker", "");
 		}
 
 		@Override
@@ -161,7 +166,9 @@ public class WATSampleOutLinks extends Configured implements Tool {
 			for (int i = 0, l = links.length(); i < l; i++) {
 				JSONObject link = links.getJSONObject(i);
 				if (link.has("url") && link.has("path")) {
+					String linkTypeMarker = "";
 					String path = link.getString("path");
+					path:
 					switch(path) {
 					case "A@/href":
 						break ;
@@ -180,7 +187,17 @@ public class WATSampleOutLinks extends Configured implements Tool {
 						if (link.has("rel")) {
 							switch(link.getString("rel")) {
 							case "canonical":
-								break ;
+								break path;
+							case "alternate":
+								if (extractFeed && link.has("type")) {
+									String type = link.getString("type");
+									if ("application/atom+xml".equals(type)
+											|| "application/rss+xml".equals(type)) {
+										linkTypeMarker = extractFeedMarker;
+										break path;
+									}
+								}
+								// fall-through for non-feed rel links
 							default:
 								 // ignore rels not explicitly listed
 								context.getCounter(COUNTER.LINKS_MEDIA_SKIPPED).increment(1);
@@ -191,7 +208,7 @@ public class WATSampleOutLinks extends Configured implements Tool {
 					}
 					context.getCounter(COUNTER.LINKS_PAGE_ACCEPTED).increment(1);
 					URL url = new URL(baseUrl, link.getString("url"));
-					outLinks.add(url.toString());
+					outLinks.add(linkTypeMarker + url.toString());
 				}
 			}
 		}
@@ -221,7 +238,7 @@ public class WATSampleOutLinks extends Configured implements Tool {
 
 		@Override
 		public void setup(Context context) {
-			sampleProbability = context.getConfiguration().getDouble("sample.probability", .5);
+			sampleProbability = context.getConfiguration().getDouble("wat.outlinks.sample.probability", .5);
 			LOG.info("Outlink sample probability = " + sampleProbability);
 			// invert sample probability for comparison with random number (0.0 <= random < 1.0)
 			sampleProbability = (1.0 - sampleProbability);
