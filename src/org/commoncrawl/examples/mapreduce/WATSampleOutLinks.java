@@ -53,6 +53,7 @@ public class WATSampleOutLinks extends Configured implements Tool {
 		LINKS_PAGE_UNIQ_SKIPPED_MAX_PER_PAGE,
 		LINKS_RANDOM_SKIP,
 		LINKS_RANDOM_SAMPLED,
+		LINKS_MALFORMED_URL
 	}
 
 	protected static class OutLinkMapper extends Mapper<Text, ArchiveReader, Text, LongWritable> {
@@ -105,7 +106,12 @@ public class WATSampleOutLinks extends Configured implements Tool {
 							JSONObject head = htmlMetaData.getJSONObject("Head");
 							if (head.has("Base")) {
 								base = head.getString("Base");
-								baseUrl = new URL(baseUrl, base);
+								try {
+									URL b = new URL(baseUrl, base);
+									baseUrl = b;
+								} catch (MalformedURLException ex) {
+									LOG.error("Ignoring malformed base URL '" + base + "': " + ex.getMessage());
+								}
 							}
 							if (head.has("Link")) {
 								// <link ...>
@@ -117,9 +123,13 @@ public class WATSampleOutLinks extends Configured implements Tool {
 									JSONObject meta = metas.getJSONObject(i);
 									if (meta.has("property") && meta.getString("property").equals("og:url")
 											&& meta.has("content")) {
-										URL url = new URL(baseUrl, meta.getString("content"));
-										context.getCounter(COUNTER.LINKS_TOTAL).increment(1);
-										outLinks.add(url.toString());
+										try {
+											URL url = new URL(baseUrl, meta.getString("content"));
+											context.getCounter(COUNTER.LINKS_TOTAL).increment(1);
+											outLinks.add(url.toString());
+										} catch (MalformedURLException ex) {
+											context.getCounter(COUNTER.LINKS_MALFORMED_URL).increment(1);
+										}
 									}
 								}
 							}
@@ -132,7 +142,7 @@ public class WATSampleOutLinks extends Configured implements Tool {
 						int n = 0;
 						for (String url : outLinks) {
 							n++;
-							outKey.set(url.toString());
+							outKey.set(url);
 							context.write(outKey, outVal);
 							if (n > maxOutlinksPerPage) {
 								context.getCounter(COUNTER.LINKS_PAGE_UNIQ_SKIPPED_MAX_PER_PAGE)
@@ -143,8 +153,9 @@ public class WATSampleOutLinks extends Configured implements Tool {
 						context.getCounter(COUNTER.LINKS_PAGE_UNIQ_ACCEPTED).increment(n);
 					} catch (JSONException ex) {
 						context.getCounter(COUNTER.EXCEPTIONS_JSON).increment(1);
-						LOG.error("Caught Exception", ex);
+						LOG.error("Caught JSONException", ex);
 					} catch (MalformedURLException ex) {
+						LOG.error("Caught MalformedURLException", ex);
 						context.getCounter(COUNTER.EXCEPTIONS_URL_MALFORMED).increment(1);
 					} catch (Exception ex) {
 						context.getCounter(COUNTER.EXCEPTIONS).increment(1);
@@ -160,7 +171,7 @@ public class WATSampleOutLinks extends Configured implements Tool {
 		}
 
 		private void addOutLinks(Context context, Collection<String> outLinks, URL baseUrl, JSONArray links)
-				throws MalformedURLException, JSONException {
+				throws JSONException {
 			context.getCounter(COUNTER.LINKS_TOTAL).increment(links.length());
 			links:
 			for (int i = 0, l = links.length(); i < l; i++) {
@@ -207,8 +218,12 @@ public class WATSampleOutLinks extends Configured implements Tool {
 						break;
 					}
 					context.getCounter(COUNTER.LINKS_PAGE_ACCEPTED).increment(1);
-					URL url = new URL(baseUrl, link.getString("url"));
-					outLinks.add(linkTypeMarker + url.toString());
+					try {
+						URL url = new URL(baseUrl, link.getString("url"));
+						outLinks.add(linkTypeMarker + url.toString());
+					} catch (MalformedURLException ex) {
+						context.getCounter(COUNTER.LINKS_MALFORMED_URL).increment(1);
+					}
 				}
 			}
 		}
@@ -241,6 +256,7 @@ public class WATSampleOutLinks extends Configured implements Tool {
 			sampleProbability = context.getConfiguration().getDouble("wat.outlinks.sample.probability", .5);
 			LOG.info("Outlink sample probability = " + sampleProbability);
 			// invert sample probability for comparison with random number (0.0 <= random < 1.0)
+			// choose link if random number is greater than or equal inverted probability
 			sampleProbability = (1.0 - sampleProbability);
 		}
 
@@ -251,7 +267,7 @@ public class WATSampleOutLinks extends Configured implements Tool {
 			for (LongWritable val : values) {
 				sum += val.get();
 			}
-			if ((sum*Math.random()) >= sampleProbability) {
+			if (sampleProbability <= 0.0 || (sum*Math.random()) >= sampleProbability) {
 				// multiply random by number of times outlink URL has been observed
 				outVal.set(sum);
 				context.write(key, outVal);
