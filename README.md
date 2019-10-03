@@ -4,7 +4,7 @@ This repository contains a simple example of how you might build an inverted ind
 
 ### Usage ###
 
-To build an inverted index, compile the Maven project as JAR file and pass this as an argument to Hadoop, indicating that the WETIndexer class should be executed.
+To build an inverted index, compile the Maven project as a JAR file and pass this as an argument to Hadoop, indicating that the WETIndexer class should be executed.
 
 For example:
 
