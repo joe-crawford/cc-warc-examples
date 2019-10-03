@@ -13,7 +13,7 @@ $ /usr/local/hadoop/bin/hadoop jar cc-warc-examples-0.3-SNAPSHOT-jar-with-depend
 ```
 In the directory where you run the above command, you need to include the WET files (possibly Gzipped) in a `data/` subdirectory, and you need to include the index terms used to create the index in an `index_terms.txt` file (as one term per line in plain text). The output index will be placed in directory `/tmp/cc`.
 
---
+---
 
 (From the original cc-warc-examples repository:)
 
