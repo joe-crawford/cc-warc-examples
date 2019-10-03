@@ -1,3 +1,22 @@
+# Common Crawl inverted index example #
+
+This repository contains a simple example of how you might build an inverted index of documents from the Common Crawl dataset, by parsing Common Crawl WET files with Apache Hadoop. It's based on the Hadoop examples provided by Common Crawl.
+
+### Usage ###
+
+To build an inverted index, compile the Maven project as JAR file and pass this as an argument to Hadoop, indicating that the WETIndexer class should be executed.
+
+For example:
+
+```bash
+$ /usr/local/hadoop/bin/hadoop jar cc-warc-examples-0.3-SNAPSHOT-jar-with-dependencies.jar org.commoncrawl.examples.mapreduce.WETIndexer
+```
+In the directory where you run the above command, you need to include the WET files (possibly Gzipped) in a `data/` subdirectory, and you need to include the index terms used to create the index in an `index_terms.txt` file (as one term per line in plain text). The output index will be placed in directory `/tmp/cc`.
+
+--
+
+(From the original cc-warc-examples repository:)
+
 ![Common Crawl Logo](http://commoncrawl.org/wp-content/uploads/2016/12/logocommoncrawl.png)
 
 # Common Crawl WARC Examples
